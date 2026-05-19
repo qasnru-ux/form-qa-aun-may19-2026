@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบสำรวจผู้เข้าร่วมการประชุม</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Sarabun) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Compat Libraries (แก้ไขปัญหา Script error จากการเรียกแบบโมดูลทั่วไป) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md py-6 px-4">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-3 rounded-xl">
+                    <i class="fa-solid fa-file-signature text-3xl text-yellow-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">ระบบแจ้งและสำรวจผู้เข้าร่วมการประชุม</h1>
+                    <p class="text-sm text-blue-100 mt-1">งานประกันคุณภาพการศึกษา ระดับหลักสูตร ประจำปีการศึกษา 2568</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="scrollToSection('survey-form-section')" class="bg-yellow-400 hover:bg-yellow-500 text-slate-900 px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> ทำแบบสำรวจ
+                </button>
+                <button onclick="scrollToSection('dashboard-section')" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> แดชบอร์ดเรียลไทม์
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- Status alert for firebase -->
+        <div id="db-status-bar" class="mb-6 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 flex items-center justify-between text-xs md:text-sm shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" id="status-dot"></span>
+                <span id="status-text">กำลังเชื่อมต่อฐานข้อมูลออนไลน์...</span>
+            </div>
+            <span class="text-slate-500" id="user-id-display">ID: ...</span>
+        </div>
+
+        <!-- Section 1: Notice Announcement -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8 transition-all hover:shadow-md">
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 text-white flex items-center gap-2">
+                <i class="fa-solid fa-bell text-lg animate-bounce"></i>
+                <h2 class="font-bold text-lg">ประกาศสำคัญ: เลื่อนการประชุม</h2>
+            </div>
+            <div class="p-6 md:p-8 text-slate-700 leading-relaxed space-y-4">
+                <p class="indent-12">
+                    ตามบันทึกงานประกันฯ ที่ อว 0621.01(1)/ว 1496 ลงวันที่ 6 พ.ค. 2569 เรื่อง ขอเชิญประชุม ได้เรียนเชิญท่านเข้าร่วมประชุม เพื่อเตรียมความพร้อมการประเมินคุณภาพการศึกษาภายใน ระดับหลักสูตร ประจำปีการศึกษา 2568 ครั้งที่ 2 ในวันศุกร์ที่ 22 พ.ค. 2569 เวลา 09.00 - 12.00 น. ณ ห้องประชุม 13209 ชั้น 2 อาคาร 13 นั้น
+                </p>
+                <div class="p-5 bg-amber-50 rounded-xl border-l-4 border-amber-500 my-4">
+                    <p class="font-medium text-slate-800">
+                        งานประกันคุณภาพการศึกษาขอเรียนแจ้ง <strong class="text-red-600 text-lg">เลื่อนการประชุม</strong> ดังกล่าว จากเดิม วันศุกร์ที่ 22 พ.ค. 2569 
+                        <span class="underline decoration-2 underline-offset-4 decoration-amber-600 font-semibold text-slate-900 bg-amber-100 px-1 rounded">เลื่อนเป็น วันจันทร์ที่ 25 พ.ค. 2569 เวลา 09.00-12.00 น. ณ ห้องประชุมสรัสจันทร ชั้น 2 อาคาร 10</span>
+                    </p>
+                </div>
+                <p class="text-sm text-slate-500 italic text-right">
+                    * จึงเรียนมาเพื่อโปรดพิจารณาและตอบแบบสอบถามข้อมูลการเข้าประชุมด้านล่าง
+                </p>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Section 2: Survey Form Column -->
+            <div id="survey-form-section" class="lg:col-span-5 space-y-8">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
+                    <h2 class="text-xl font-bold text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-blue-600 rounded-full"></span>
+                        แบบฟอร์มตอบรับการประชุม
+                    </h2>
+                    
+                    <form id="surveyForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+                        <!-- Q1: Name Selection -->
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-2 flex items-center justify-between">
+                                <span>คำถามข้อที่ 1 : ผู้ตอบแบบตอบรับ <span class="text-red-500">*</span></span>
+                                <span class="text-xs text-blue-600 font-normal">ค้นหาชื่อพิมพ์ในช่องได้</span>
+                            </label>
+                            
+                            <!-- Searchable Dropdown Container -->
+                            <div class="relative">
+                                <div class="relative">
+                                    <input type="text" id="nameSearchInput" placeholder="🔍 ค้นหารายชื่อ หรือกดเพื่อเลือก..." 
+                                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm pr-10"
+                                           onfocus="showDropdown()" oninput="filterDropdown()">
+                                    <button type="button" onclick="toggleDropdown()" class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                                        <i class="fa-solid fa-chevron-down text-xs" id="dropdownArrow"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Dropdown List -->
+                                <div id="namesDropdown" class="hidden absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-slate-50">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <!-- Hidden input to store selected ID -->
+                            <input type="hidden" id="selectedUserCode" required>
+                            <input type="hidden" id="selectedUserName" required>
+                            
+                            <!-- Display Selected Person Card -->
+                            <div id="selectedPersonCard" class="hidden mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-circle-user text-blue-600 text-lg"></i>
+                                    <div>
+                                        <p class="text-xs text-slate-500" id="displayCode"></p>
+                                        <p class="text-sm font-semibold text-slate-800" id="displayName"></p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="clearSelection()" class="text-slate-400 hover:text-red-500 p-1">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Q2: Availability -->
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-3">
+                                คำถามข้อที่ 2 : ท่านสามารถเข้าร่วมกิจกรรมในวันที่ 25 พ.ค. 69 ได้หรือไม่ <span class="text-red-500">*</span>
+                            </label>
+                            
+                            <div class="space-y-3">
+                                <!-- Option 1: Available -->
+                                <label class="flex items-center p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all" id="optionYesLabel">
+                                    <input type="radio" name="attendance" value="yes" required onchange="toggleReasonInput(false)" class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-slate-300">
+                                    <span class="ml-3 font-medium text-slate-700 flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-check text-green-500"></i> สามารถเข้าร่วมได้
+                                    </span>
+                                </label>
+                                
+                                <!-- Option 2: Not Available -->
+                                <label class="flex items-center p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all" id="optionNoLabel">
+                                    <input type="radio" name="attendance" value="no" onchange="toggleReasonInput(true)" class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-slate-300">
+                                    <span class="ml-3 font-medium text-slate-700 flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-xmark text-red-500"></i> ไม่สามารถเข้าร่วมได้ เนื่องจาก...
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Sub-input for reason -->
+                        <div id="reasonContainer" class="hidden space-y-2 animate-fadeIn">
+                            <label class="block text-sm font-semibold text-slate-600">
+                                โปรดระบุเหตุผล <span class="text-red-500">*</span>
+                            </label>
+                            <textarea id="absenceReason" rows="3" placeholder="ระบุเหตุผลที่ไม่สามารถเข้าร่วมประชุมได้..." 
+                                      class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                      ></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/10 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i> ส่งคำตอบแบบสำรวจ
+                        </button>
+                    </form>
+                </div>
+
+                <!-- App Information Card -->
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-6 shadow-sm">
+                    <h3 class="font-bold text-lg mb-2 text-yellow-300 flex items-center gap-2">
+                        <i class="fa-solid fa-info-circle"></i> ข้อมูลเพิ่มเติมระบบ
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        แอปพลิเคชันนี้ทำงานร่วมกับฐานข้อมูลออนไลน์ระดับโลกอย่างมีประสิทธิภาพสูง พร้อมเชื่อมโยงข้อมูลผู้ตอบประวัติโดยอิงจากบัญชีทางการของอาจารย์ผู้ทรงคุณวุฒิระดับหลักสูตร (AUN-SNRU) จำนวน 34 ท่าน เพื่อความง่าย รวดเร็ว และเป็นระบบระเบียบสูงสุด
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 3: Real-time Dashboard Column -->
+            <div id="dashboard-section" class="lg:col-span-7 space-y-6">
+                <!-- Summary KPI Cards -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">ส่งแบบสำรวจแล้ว</p>
+                        <p id="kpi-total" class="text-3xl font-extrabold text-blue-600">0</p>
+                        <p class="text-[10px] text-slate-400 mt-1">จากทั้งหมด 34 คน</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">สามารถเข้าร่วม</p>
+                        <p id="kpi-yes" class="text-3xl font-extrabold text-green-500">0</p>
+                        <p id="pct-yes" class="text-[10px] text-green-600 font-medium mt-1">0% ของผู้ตอบ</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">ไม่สามารถร่วม</p>
+                        <p id="kpi-no" class="text-3xl font-extrabold text-red-500">0</p>
+                        <p id="pct-no" class="text-[10px] text-red-600 font-medium mt-1">0% ของผู้ตอบ</p>
+                    </div>
+                </div>
+
+                <!-- Visual Chart Panel -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center justify-between">
+                        <span><i class="fa-solid fa-chart-bar text-indigo-500 mr-1"></i> แผนภูมิแสดงการเข้าร่วมสัมมนา</span>
+                        <span class="text-xs font-normal text-slate-400">อัปเดตแบบเรียลไทม์</span>
+                    </h3>
+
+                    <!-- Chart Bars -->
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-semibold text-green-600"><i class="fa-solid fa-check-circle mr-1"></i> สามารถเข้าร่วมได้</span>
+                                <span id="bar-yes-text" class="font-bold">0 คน (0%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden">
+                                <div id="bar-yes" class="bg-gradient-to-r from-green-400 to-green-500 h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-semibold text-red-600"><i class="fa-solid fa-times-circle mr-1"></i> ไม่สามารถเข้าร่วมได้</span>
+                                <span id="bar-no-text" class="font-bold">0 คน (0%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden">
+                                <div id="bar-no" class="bg-gradient-to-r from-red-400 to-red-500 h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Circle Graph Representation (Minimal Pure CSS SVG Circle) -->
+                    <div class="flex justify-center mt-6">
+                        <div class="relative flex items-center justify-center w-36 h-36">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                <path class="text-slate-100" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="svg-circle-segment" class="text-green-500 transition-all duration-1000" stroke-dasharray="0, 100" stroke-width="3.2" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="absolute text-center">
+                                <span id="circle-text-pct" class="text-2xl font-black text-slate-800">0%</span>
+                                <p class="text-[10px] text-slate-400 font-semibold tracking-wider">เข้าร่วมประชุม</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Live Table Feed -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-900"><i class="fa-solid fa-list-check text-blue-500 mr-1"></i> รายการผลตอบรับการเข้าประชุม</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">เรียงลำดับจากแบบบันทึกที่อัปเดตล่าสุด</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="injectDemoData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-all">
+                                <i class="fa-solid fa-magic-wand-sparkles mr-1"></i> เพิ่มข้อมูลทดสอบ
+                            </button>
+                            <button onclick="clearDemoData()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg font-medium transition-all">
+                                <i class="fa-solid fa-trash mr-1"></i> ล้างข้อมูลทั้งหมด
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Log Input -->
+                    <div class="px-6 py-3 bg-slate-50 border-b border-slate-100">
+                        <input type="text" id="logSearchInput" oninput="renderTable()" placeholder="🔍 ค้นหารายชื่อในประวัติการส่ง..." class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Table Container -->
+                    <div class="overflow-x-auto max-h-[400px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-55 border-b border-slate-100 text-slate-500 font-semibold text-xs uppercase">
+                                    <th class="py-3 px-4">ผู้ส่งข้อมูล</th>
+                                    <th class="py-3 px-4">การตอบรับ</th>
+                                    <th class="py-3 px-4">เหตุผล/ข้อความเพิ่มเติม</th>
+                                    <th class="py-3 px-4 text-right">เวลาทำรายการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="responsesTableBody" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="4" class="py-10 text-center text-slate-400 text-sm">
+                                        <div class="flex flex-col items-center gap-2 justify-center">
+                                            <i class="fa-solid fa-folder-open text-3xl text-slate-300"></i>
+                                            <p>ยังไม่มีผู้ตอบแบบตอบรับการประชุมในขณะนี้</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Success Modal Alert -->
+    <div id="successModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl mx-4 transform transition-all animate-scaleUp">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-check text-green-600 text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">บันทึกข้อมูลสำเร็จ!</h3>
+            <p class="text-slate-500 text-sm mb-6">ระบบได้ทำการบันทึกข้อมูลตอบรับการเลื่อนประชุมลงในฐานข้อมูลส่วนกลางเป็นที่เรียบร้อยแล้ว</p>
+            <button onclick="closeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-blue-500/10 transition-all">
+                ตกลง
+            </button>
+        </div>
+    </div>
+
+    <!-- Script Section -->
+    <script>
+        // Master dataset (34 experts)
+        const MASTER_PROFESSORS = [
+            { code: "AUN-SNRU-02", name: "อาจารย์ ดร.กฤตภาส  วงค์มา" },
+            { code: "AUN-SNRU-03", name: "รองศาสตราจารย์ ดร.ธรัช  อารีราษฎร์" },
+            { code: "AUN-SNRU-04", name: "อาจารย์นภาไล  ตาสาโรจน์" },
+            { code: "AUN-SNRU-05", name: "ผู้ช่วยศาสตราจารย์ ดร.พัลลภ  จันทร์กระจ่าง" },
+            { code: "AUN-SNRU-06", name: "รองศาสตราจารย์ ดร.วรปภา  อารีราษฎร์" },
+            { code: "AUN-SNRU-07", name: "อาจารย์ศิริพร  ตั้งวิบูลย์พาณิชย์" },
+            { code: "AUN-SNRU-08", name: "ผู้ช่วยศาสตราจารย์ ดร.สุวิทย์  ทิพอุเทน" },
+            { code: "AUN-SNRU-09", name: "อาจารย์ ดร.อนงลักษณ์  หนูหมอก" },
+            { code: "AUN-SNRU-10", name: "อาจารย์อิสฬิยาภรณ์  วรกิตตนนท์" },
+            { code: "AUN-SNRU-11", name: "อาจารย์ ดร.กรกนก  นวลขำ" },
+            { code: "AUN-SNRU-12", name: "ผู้ช่วยศาสตราจารย์กฤษณ์  พิเนตรเสถียร" },
+            { code: "AUN-SNRU-13", name: "ผู้ช่วยศาสตราจารย์เกริกไกร  ปริญญาพล" },
+            { code: "AUN-SNRU-14", name: "ผู้ช่วยศาสตราจารย์ ดร.จินดา  จันดาเรือง" },
+            { code: "AUN-SNRU-15", name: "อาจารย์ ดร.ชมพูนุท  สมแสน" },
+            { code: "AUN-SNRU-16", name: "อาจารย์ชัยยศ  ลักษณะวิลัย" },
+            { code: "AUN-SNRU-17", name: "อาจารย์เชาวรัตน์  ทุนร่องช้าง" },
+            { code: "AUN-SNRU-18", name: "อาจารย์ ดร.ฐิตินันท์  เหมะธุลิน" },
+            { code: "AUN-SNRU-19", name: "ผู้ช่วยศาสตราจารย์ ดร.ทาริกา  ทิพอุเทน" },
+            { code: "AUN-SNRU-20", name: "อาจารย์ธัญลักษณ์  จันทร์กระจ่าง" },
+            { code: "AUN-SNRU-21", name: "อาจารย์ธีรวิทย์  กลิ่นจุ้ย" },
+            { code: "AUN-SNRU-22", name: "ผู้ช่วยศาสตราจารย์เบญจพร  อุผา" },
+            { code: "AUN-SNRU-23", name: "ผู้ช่วยศาสตราจารย์ ดร.พรทิพย์  อนันตกุล" },
+            { code: "AUN-SNRU-24", name: "อาจารย์พรรณยุพา  เนาว์ศรีสอน" },
+            { code: "AUN-SNRU-25", name: "อาจารย์เพ็ญพรรษา  อุ้ยปัดฌาวงศ์" },
+            { code: "AUN-SNRU-26", name: "อาจารย์ภราดร  ทรงวิชา" },
+            { code: "AUN-SNRU-27", name: "อาจารย์ ภวภาวัน  ล้อมหามงคล" },
+            { code: "AUN-SNRU-28", name: "อาจารย์ ดร.วัชราภรณ์  เขาเขจร" },
+            { code: "AUN-SNRU-29", name: "อาจารย์วิชชุดา  ภาโสม" },
+            { code: "AUN-SNRU-30", name: "อาจารย์วิชญานกานต์  ขอนยาง" },
+            { code: "AUN-SNRU-31", name: "ผู้ช่วยศาสตราจารย์ ดร.สถิต  ภาคมฤค" },
+            { code: "AUN-SNRU-32", name: "อาจารย์ ดร.สิรินทัศน์  เลี่ยมแหลม" },
+            { code: "AUN-SNRU-33", name: "อาจารย์อภิญญา  สีสมยา" },
+            { code: "AUN-SNRU-34", name: "ผู้ช่วยศาสตราจารย์อภิวัฒน์  ปานทอง" },
+            { code: "AUN-SNRU-35", name: "ผู้ช่วยศาสตราจารย์ ดร.อรุณรัตน์  คำแหงพล" }
+        ];
+
+        // Global state
+        let db;
+        let auth;
+        let userId = '';
+        let appId = typeof __app_id !== 'undefined' ? __app_id : 'aun-snru-meeting-notice';
+        let surveyResponses = []; // Local cache/fallback state
+
+        // Initialize App
+        window.onload = function() {
+            initSearchableDropdown();
+            setupFirebase();
+        };
+
+        // Firebase Configuration & Initialization
+        async function setupFirebase() {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const userIdDisplay = document.getElementById('user-id-display');
+
+            try {
+                if (typeof __firebase_config !== 'undefined') {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    
+                    // ใช้ firebase.initializeApp เนื่องจากเป็นเวอร์ชัน Compat 
+                    const app = firebase.initializeApp(firebaseConfig);
+                    auth = firebase.auth();
+                    db = firebase.firestore();
+                    
+                    // Authentication - Rule 3 (รองรับ Custom Token และ Anonymous)
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+
+                    auth.onAuthStateChanged((user) => {
+                        if (user) {
+                            userId = user.uid;
+                            userIdDisplay.innerText = `UID: ${userId.substring(0, 8)}...`;
+                            statusDot.className = "inline-block w-2.5 h-2.5 rounded-full bg-green-500";
+                            statusText.innerText = "เชื่อมต่อระบบฐานข้อมูลคลาวด์เรียบร้อยแล้ว (Real-time)";
+                            // Fetch records
+                            listenToResponses();
+                        } else {
+                            useInMemoryState();
+                        }
+                    });
+                } else {
+                    useInMemoryState();
+                }
+            } catch (err) {
+                console.warn("Firestore initialization failed. Using memory state.", err);
+                useInMemoryState();
+            }
+        }
+
+        function useInMemoryState() {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const userIdDisplay = document.getElementById('user-id-display');
+            
+            userId = 'offline-user-' + Math.random().toString(36).substr(2, 9);
+            userIdDisplay.innerText = `โหมดประมวลผลโลคอล`;
+            statusDot.className = "inline-block w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse";
+            statusText.innerText = "กำลังใช้งานฐานข้อมูลภายในจำลองบนเว็บบราวเซอร์ของคุณ";
+            
+            // Generate some dummy initial records for better demo experience
+            loadMockData();
+            updateDashboard();
+        }
+
+        // Firestore Real-time listener
+        function listenToResponses() {
+            if (!db || !userId) return;
+            
+            // Rule 1: STRICT PATH: /artifacts/{appId}/public/data/{collectionName}
+            const publicCollection = db.collection('artifacts').document ? 
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses') :
+                firebase.firestore().collection('artifacts').doc(appId).collection('public').doc('data').collection('responses');
+            
+            // Rule 2: NO COMPLEX QUERIES. Just simple fetch and sort in JS memory.
+            publicCollection.onSnapshot((querySnapshot) => {
+                const fetched = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    fetched.push(data);
+                });
+                
+                // Sort by timestamp desc in JS
+                fetched.sort((a, b) => {
+                    const dateA = a.timestamp ? (a.timestamp.seconds * 1000) : 0;
+                    const dateB = b.timestamp ? (b.timestamp.seconds * 1000) : 0;
+                    return dateB - dateA;
+                });
+
+                surveyResponses = fetched;
+                updateDashboard();
+            }, (error) => {
+                console.error("Firestore loading error: ", error);
+                // Fallback to local memory
+                useInMemoryState();
+            });
+        }
+
+        // Searchable Dropdown functions
+        function initSearchableDropdown() {
+            const dropdown = document.getElementById('namesDropdown');
+            dropdown.innerHTML = '';
+            
+            MASTER_PROFESSORS.forEach(prof => {
+                const item = document.createElement('div');
+                item.className = 'px-4 py-2.5 hover:bg-slate-100 cursor-pointer text-sm transition-all flex items-center justify-between';
+                item.innerHTML = `
+                    <span class="font-medium text-slate-800">${prof.name}</span>
+                    <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded">${prof.code}</span>
+                `;
+                item.onclick = () => selectProfessor(prof);
+                dropdown.appendChild(item);
+            });
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('namesDropdown');
+            const arrow = document.getElementById('dropdownArrow');
+            if (dropdown.classList.contains('hidden')) {
+                showDropdown();
+            } else {
+                hideDropdown();
+            }
+        }
+
+        function showDropdown() {
+            document.getElementById('namesDropdown').classList.remove('hidden');
+            document.getElementById('dropdownArrow').className = "fa-solid fa-chevron-up text-xs text-blue-500";
+        }
+
+        function hideDropdown() {
+            setTimeout(() => {
+                document.getElementById('namesDropdown').classList.add('hidden');
+                document.getElementById('dropdownArrow').className = "fa-solid fa-chevron-down text-xs";
+            }, 200); // Small timeout to allow element click event to fire first
+        }
+
+        function filterDropdown() {
+            const val = document.getElementById('nameSearchInput').value.toLowerCase();
+            const dropdown = document.getElementById('namesDropdown');
+            dropdown.classList.remove('hidden');
+            
+            let count = 0;
+            Array.from(dropdown.children).forEach(child => {
+                const text = child.textContent.toLowerCase();
+                if (text.includes(val)) {
+                    child.style.display = '';
+                    count++;
+                } else {
+                    child.style.display = 'none';
+                }
+            });
+        }
+
+        function selectProfessor(prof) {
+            document.getElementById('selectedUserCode').value = prof.code;
+            document.getElementById('selectedUserName').value = prof.name;
+            
+            // Show selection card
+            const card = document.getElementById('selectedPersonCard');
+            document.getElementById('displayCode').innerText = prof.code;
+            document.getElementById('displayName').innerText = prof.name;
+            card.classList.remove('hidden');
+            
+            // Set text in search input
+            document.getElementById('nameSearchInput').value = prof.name;
+            hideDropdown();
+        }
+
+        function clearSelection() {
+            document.getElementById('selectedUserCode').value = '';
+            document.getElementById('selectedUserName').value = '';
+            document.getElementById('nameSearchInput').value = '';
+            document.getElementById('selectedPersonCard').classList.add('hidden');
+        }
+
+        function toggleReasonInput(show) {
+            const container = document.getElementById('reasonContainer');
+            const textarea = document.getElementById('absenceReason');
+            const optYes = document.getElementById('optionYesLabel');
+            const optNo = document.getElementById('optionNoLabel');
+
+            if (show) {
+                container.classList.remove('hidden');
+                textarea.required = true;
+                optNo.className = "flex items-center p-4 border-2 border-red-500 bg-red-50/50 rounded-xl cursor-pointer transition-all";
+                optYes.className = "flex items-center p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all";
+            } else {
+                container.classList.add('hidden');
+                textarea.required = false;
+                textarea.value = '';
+                optYes.className = "flex items-center p-4 border-2 border-green-500 bg-green-50/50 rounded-xl cursor-pointer transition-all";
+                optNo.className = "flex items-center p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all";
+            }
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const profCode = document.getElementById('selectedUserCode').value;
+            const profName = document.getElementById('selectedUserName').value;
+            
+            if (!profCode || !profName) {
+                alert("กรุณาเลือกผู้ส่งแบบรายงานในช่องคำถามข้อที่ 1");
+                return;
+            }
+
+            const attendanceVal = document.querySelector('input[name="attendance"]:checked').value;
+            const absenceReason = document.getElementById('absenceReason').value.trim();
+
+            if (attendanceVal === 'no' && !absenceReason) {
+                alert("กรุณาระบุเหตุผลที่ไม่สามารถเข้าร่วมประชุมได้");
+                return;
+            }
+
+            const payload = {
+                code: profCode,
+                name: profName,
+                canAttend: attendanceVal === 'yes',
+                reason: attendanceVal === 'no' ? absenceReason : '',
+                timestamp: firebase && firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : { seconds: Date.now()/1000 },
+                timestampFormatted: new Date().toLocaleString('th-TH')
+            };
+
+            if (db) {
+                try {
+                    // Save to Firestore (Rule 1: public/data/responses)
+                    const docId = profCode; 
+                    const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses').doc(docId);
+                    
+                    await docRef.set(payload);
+                    openModal();
+                    resetForm();
+                } catch (err) {
+                    console.error("Firestore Saving Failed: ", err);
+                    saveToLocalMemory(payload);
+                }
+            } else {
+                saveToLocalMemory(payload);
+            }
+        }
+
+        function saveToLocalMemory(payload) {
+            // Find existing
+            const existingIndex = surveyResponses.findIndex(r => r.code === payload.code);
+            if (existingIndex > -1) {
+                surveyResponses[existingIndex] = payload;
+            } else {
+                surveyResponses.unshift(payload);
+            }
+            updateDashboard();
+            openModal();
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('surveyForm').reset();
+            clearSelection();
+            toggleReasonInput(false);
+        }
+
+        // Modal Controls
+        function openModal() {
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('successModal').classList.add('hidden');
+        }
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Dashboard logic & updates
+        function updateDashboard() {
+            const total = surveyResponses.length;
+            const yesCount = surveyResponses.filter(r => r.canAttend).length;
+            const noCount = total - yesCount;
+
+            const yesPct = total > 0 ? Math.round((yesCount / total) * 100) : 0;
+            const noPct = total > 0 ? Math.round((noCount / total) * 100) : 0;
+
+            // UI Elements Update
+            document.getElementById('kpi-total').innerText = total;
+            document.getElementById('kpi-yes').innerText = yesCount;
+            document.getElementById('kpi-no').innerText = noCount;
+
+            document.getElementById('pct-yes').innerText = `${yesPct}% ของผู้ตอบ`;
+            document.getElementById('pct-no').innerText = `${noPct}% ของผู้ตอบ`;
+
+            // Update Progress bars
+            document.getElementById('bar-yes').style.width = `${yesPct}%`;
+            document.getElementById('bar-yes-text').innerText = `${yesCount} คน (${yesPct}%)`;
+
+            document.getElementById('bar-no').style.width = `${noPct}%`;
+            document.getElementById('bar-no-text').innerText = `${noCount} คน (${noPct}%)`;
+
+            // SVG Radial Update
+            document.getElementById('circle-text-pct').innerText = `${yesPct}%`;
+            document.getElementById('svg-circle-segment').setAttribute('stroke-dasharray', `${yesPct}, 100`);
+
+            renderTable();
+        }
+
+        // Dynamic Table Render with Search Filtering
+        function renderTable() {
+            const filterText = document.getElementById('logSearchInput').value.toLowerCase();
+            const tbody = document.getElementById('responsesTableBody');
+            tbody.innerHTML = '';
+
+            const filteredData = surveyResponses.filter(r => 
+                r.name.toLowerCase().includes(filterText) || 
+                r.code.toLowerCase().includes(filterText) ||
+                (r.reason && r.reason.toLowerCase().includes(filterText))
+            );
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="py-10 text-center text-slate-400">
+                            ไม่พบข้อมูลผลลัพธ์ตอบกลับตามเงื่อนไขค้นหา
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+
+                const isYes = item.canAttend;
+                const statusBadge = isYes 
+                    ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800"><i class="fa-solid fa-check"></i> เข้าร่วม</span>`
+                    : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800"><i class="fa-solid fa-xmark"></i> ไม่เข้าร่วม</span>`;
+
+                const displayReason = isYes 
+                    ? `<span class="text-slate-400 italic">พร้อมเข้าร่วมประชุม</span>` 
+                    : `<span class="text-slate-700 font-medium">${item.reason || '-'}</span>`;
+
+                // Handle server vs local timestamp formatting
+                let displayTime = item.timestampFormatted || "เมื่อสักครู่";
+                if (item.timestamp && item.timestamp.seconds) {
+                    displayTime = new Date(item.timestamp.seconds * 1000).toLocaleString('th-TH');
+                }
+
+                tr.innerHTML = `
+                    <td class="py-4 px-4 font-semibold text-slate-800">
+                        <div class="flex flex-col">
+                            <span>${item.name}</span>
+                            <span class="text-[10px] text-slate-400">${item.code}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4">${statusBadge}</td>
+                    <td class="py-4 px-4 text-xs max-w-xs truncate" title="${item.reason || ''}">${displayReason}</td>
+                    <td class="py-4 px-4 text-right text-xs text-slate-400 font-mono">${displayTime}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Seed initial mock data for visualization layout simulation
+        function loadMockData() {
+            const randomSample = [
+                { code: "AUN-SNRU-02", name: "อาจารย์ ดร.กฤตภาส  วงค์มา", canAttend: true, reason: "" },
+                { code: "AUN-SNRU-03", name: "รองศาสตราจารย์ ดร.ธรัช  อารีราษฎร์", canAttend: true, reason: "" },
+                { code: "AUN-SNRU-05", name: "ผู้ช่วยศาสตราจารย์ ดร.พัลลภ  จันทร์กระจ่าง", canAttend: false, reason: "ติดราชการประเมินวิชาการที่สถาบันอื่น" },
+                { code: "AUN-SNRU-06", name: "รองศาสตราจารย์ ดร.วรปภา  อารีราษฎร์", canAttend: true, reason: "" },
+                { code: "AUN-SNRU-12", name: "ผู้ช่วยศาสตราจารย์กฤษณ์  พิเนตรเสถียร", canAttend: false, reason: "ติดภารกิจการเรียนการสอนภาคบ่ายแบบเตรียมงาน" },
+                { code: "AUN-SNRU-18", name: "อาจารย์ ดร.ฐิตินันท์  เหมะธุลิน", canAttend: true, reason: "" },
+                { code: "AUN-SNRU-35", name: "ผู้ช่วยศาสตราจารย์ ดร.อรุณรัตน์  คำแหงพล", canAttend: true, reason: "" }
+            ];
+
+            surveyResponses = randomSample.map((p, idx) => ({
+                ...p,
+                timestampFormatted: new Date(Date.now() - (idx * 15 * 60000)).toLocaleString('th-TH')
+            }));
+        }
+
+        // Inject Random Demo Data (For demonstration ease)
+        async function injectDemoData() {
+            // Find non-submitted professors
+            const currentCodes = surveyResponses.map(r => r.code);
+            const remaining = MASTER_PROFESSORS.filter(p => !currentCodes.includes(p.code));
+
+            if (remaining.length === 0) {
+                alert("อาจารย์ทุกท่านตอบแบบสำรวจเต็มครบ 34 คนแล้ว");
+                return;
+            }
+
+            // Pick a random professor
+            const randomProf = remaining[Math.floor(Math.random() * remaining.length)];
+            const isAvailable = Math.random() > 0.3; // 70% available
+            const reasons = ["มีสอนวิชาสัมมนาวิชาชีพ", "ติดประชุมคณะกรรมการวิชาการ มหาวิทยาลัย", "ลาป่วยไปพบแพทย์ตามนัด", "ลาพักผ่อนต่างจังหวัด", "เข้าร่วมโครงการสัมมนาภายนอก"];
+            const randomReason = isAvailable ? "" : reasons[Math.floor(Math.random() * reasons.length)];
+
+            const payload = {
+                code: randomProf.code,
+                name: randomProf.name,
+                canAttend: isAvailable,
+                reason: randomReason,
+                timestamp: firebase && firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : { seconds: Date.now()/1000 },
+                timestampFormatted: new Date().toLocaleString('th-TH')
+            };
+
+            if (db) {
+                try {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses').doc(randomProf.code).set(payload);
+                } catch(e) {
+                    console.error("Local mock append error:", e);
+                    saveToLocalMemory(payload);
+                }
+            } else {
+                saveToLocalMemory(payload);
+            }
+        }
+
+        // Clear All Responses (Mainly for demo testing)
+        async function clearDemoData() {
+            if (confirm("คุณแน่ใจหรือไม่ที่จะทำการล้างข้อมูลแบบสำรวจทั้งหมด? (การลบข้อมูลจริงจำเป็นต้องดำเนินการทางแอดมินเท่านั้น)")) {
+                if (db) {
+                    try {
+                        const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses');
+                        const snap = await ref.get();
+                        
+                        const promises = [];
+                        snap.forEach(doc => promises.push(doc.ref.delete()));
+                        await Promise.all(promises);
+                        
+                        surveyResponses = [];
+                        updateDashboard();
+                    } catch (e) {
+                        console.error("Error clearing online DB:", e);
+                        surveyResponses = [];
+                        updateDashboard();
+                    }
+                } else {
+                    surveyResponses = [];
+                    updateDashboard();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
